@@ -1,0 +1,77 @@
+========================================
+= Cassandra (CQL) — schema definitions =
+========================================
+
+-- Connect with: docker exec -it cassandra cqlsh
+
+-- 1) Keyspace
+CREATE KEYSPACE IF NOT EXISTS library_ks
+WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+USE library_ks;
+
+-- 2) Tables
+CREATE TABLE IF NOT EXISTS users (
+    user_id text PRIMARY KEY,
+    name    text
+);
+
+CREATE TABLE IF NOT EXISTS books (
+    isbn  text PRIMARY KEY,
+    title text
+);
+
+-- Composite PK to allow fast lookups by user and book
+CREATE TABLE IF NOT EXISTS borrows (
+    user_id     text,
+    isbn        text,
+    borrowed_at timestamp,
+    PRIMARY KEY (user_id, isbn)
+);
+
+-- (Optional) Sample Data
+-- Users
+INSERT INTO users (user_id, name) VALUES ('u1', 'Zahra');
+INSERT INTO users (user_id, name) VALUES ('u2', 'Noah');
+INSERT INTO users (user_id, name) VALUES ('u3', 'Mina');
+
+-- Books
+INSERT INTO books (isbn, title) VALUES ('isbn123', 'Python Basics');
+INSERT INTO books (isbn, title) VALUES ('isbn456', 'Data Structures in Python');
+INSERT INTO books (isbn, title) VALUES ('isbn789', 'NoSQL with Cassandra & Neo4j');
+
+-- Borrows
+INSERT INTO borrows (user_id, isbn, borrowed_at) VALUES ('u1', 'isbn123', toTimestamp(now()));
+INSERT INTO borrows (user_id, isbn, borrowed_at) VALUES ('u2', 'isbn456', toTimestamp(now()));
+INSERT INTO borrows (user_id, isbn, borrowed_at) VALUES ('u3', 'isbn789', toTimestamp(now()));
+
+-- (Optional) Quick checks
+SELECT * FROM users;
+SELECT * FROM books;
+SELECT * FROM borrows;
+
+
+===============================
+= Neo4j (Cypher) — constraints =
+===============================
+
+/*
+Run in Neo4j Browser at http://localhost:7474
+or via any Neo4j driver session.
+*/
+
+-- 1) Unique constraints
+CREATE CONSTRAINT user_id_unique IF NOT EXISTS
+FOR (u:User) REQUIRE u.user_id IS UNIQUE;
+
+CREATE CONSTRAINT book_isbn_unique IF NOT EXISTS
+FOR (b:Book) REQUIRE b.isbn IS UNIQUE;
+
+-- (Optional) Minimal seed to verify graph
+MERGE (u:User {user_id:'u1'}) SET u.name = 'Zahra';
+MERGE (b:Book {isbn:'isbn123'}) SET b.title = 'Python Basics';
+MERGE (u)-[:BORROWED]->(b);
+
+-- (Optional) Query to visualize
+MATCH (u:User)-[r:BORROWED]->(b:Book)
+RETURN u, r, b;
